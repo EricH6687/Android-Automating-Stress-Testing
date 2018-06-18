@@ -1,0 +1,121 @@
+#!/bin/sh
+#Camcorder_V1
+#Eric Huang 2013
+
+	echo "Testing is started at `date`..."
+	export busyboxpath="/data/local/tmp/busybox"
+	export package="com.android.gallery3d/com.android.camera.VideoCamera"
+	`date > "/data/local/tmp/meminfo-original.log"`
+	`cat /proc/meminfo >> "/data/local/tmp/meminfo-original.log"`
+	export string="PID"
+	r=0
+	takevideo=0
+	takefail=0
+	startingrecordfail=0
+	launchfail=0
+	homefail=0
+
+	am start -n $package
+	for i in 1 2 3 4 5
+		do
+			input keyevent 4
+		done
+
+
+	while [ "$r" != -1 ]
+		do
+			r=`$busyboxpath expr $r + 1 `
+			for i in 1 2 3 4 5
+				do
+					input keyevent 4
+				done
+			sleep 5s
+#			if [ "$2" == 1 ]
+#			then
+#				mv /mnt/sdcard/DCIM/Camera/* /mnt/sdcard/DCIM/Camera_video
+#			fi
+			rm -r /mnt/sdcard/DCIM/Camera/*
+			export state=`dumpsys media.camera|$busyboxpath grep -i $string`
+			export check=`[ -z "$state" ] ; echo $?`
+			if [ "$check" == 0 ]
+				then
+					am start -n $package
+					echo "launch Camcorder"
+					sleep 5s
+					export state=`dumpsys media.camera|$busyboxpath grep -i $string`
+					export check=`[ -z "$state" ] ; echo $?`
+					if [ "$check" == 1 ]
+						then
+							input keyevent 27
+							echo "Try Record a video"
+							sleep 5s
+							export recording=`dumpsys|$busyboxpath grep 'Camera Id:'|$busyboxpath tr -d ' '`
+							if [ "$recording" == "CameraId:0" ]
+								then
+									echo "starting Record"
+									sleep 5
+									input keyevent 27
+									echo "stop Record"
+									sleep 5
+									export video=`$busyboxpath find /mnt/sdcard/DCIM/Camera/ -type f |$busyboxpath wc -l`
+									if [ "$video" != 0 ]
+										then
+											takevideo=`$busyboxpath expr $takevideo + 1 `
+											echo "Record the video PASS for $takevideo cycle(s)"
+										else
+											takefail=`$busyboxpath expr $takefail + 1 `
+											echo "Record the video FAIL for $takefail cycle(s)"
+											`screenshot -i /data/local/tmp/screenshot/Record_Video_FAIL_$takefail.png`
+											sleep 3s
+									fi
+								else
+									startingrecordfail=`$busyboxpath expr $startingrecordfail + 1 `
+									echo "Try starting Record FAIL for $startingrecordfail cycle(s)"
+									`screenshot -i /data/local/tmp/screenshot/Starting_Record_FAIL_$startingrecordfail.png`
+									sleep 3s
+							fi
+						else
+							launchfail=`$busyboxpath expr $launchfail + 1 `
+							echo "launch Camcorder FAIL for $launchfail cycle(s)"
+							`screenshot -i /data/local/tmp/screenshot/Launch_Camcorder_FAIL_$launchfail.png`
+							sleep 3s
+					fi
+				else
+					homefail=`$busyboxpath expr $homefail + 1 `
+					echo "stop the Camcorder FAIL for $homefail cycle(s)"
+					`screenshot -i /data/local/tmp/screenshot/Stop_Camcorder_FAIL_$homefail.png`
+					sleep 3s
+			fi
+
+			sleep 5s
+
+			echo "Testing is finish at `date`..."
+			`date > "/data/local/tmp/meminfo-aftertest.log"`
+			`cat /proc/meminfo >> "/data/local/tmp/meminfo-aftertest.log"`
+
+
+			`echo "Total test Time: $r round" > "/data/local/tmp/TestResult.txt"`
+			`echo "Record the video PASS for $takevideo cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			`echo "Record the video FAIL for $takefail cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			`echo "Try starting Record FAIL for $startingrecordfail cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			`echo "launch Camcorder FAIL for $launchfail cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			`echo "stop the Camcorder FAIL for $homefail cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			echo `uptime` >> "/data/local/tmp/TestResult.txt"
+		done
+
+
+#	if [ "$2" == 1 ]
+#		then
+#		mv /mnt/sdcard/DCIM/Camera/* /mnt/sdcard/DCIM/Camera_picture
+#	fi
+
+	rm -r /mnt/sdcard/DCIM/Camera/*
+	for i in 1 2 3 4 5
+		do
+			input keyevent 4
+		done
+
+
+
+
+
