@@ -1,0 +1,32 @@
+#SnapshotToFull_V1
+#Eric Huang 2013
+
+
+	export busyboxpath="/data/local/tmp/busybox"
+	r=0
+
+	while [ "$r" != -1 ]
+		do
+			export Communication=`cat /data/local/tmp/Communication`
+			if [ "$Communication" == "recording" ]
+			then
+				r=`$busyboxpath expr $r + 1 `
+				input keyevent 22
+				input keyevent 22
+				`echo "shot $r" >> "/data/local/tmp/scriptlog.log"`
+				sleep 3s
+			elif [ "$Communication" == "done" ]
+			then
+				`echo "totle shot: $r" >> "/data/local/tmp/TestResult.log"`
+				`echo "Testing is finish" >> "/data/local/tmp/TestResult.log"`
+				`date >> "/data/local/tmp/TestResult.log"`
+				`echo " " >> "/data/local/tmp/TestResult.log"`
+				`echo "SD card info :" >> "/data/local/tmp/TestResult.log"`
+				`df "/sdcard" >> "/data/local/tmp/TestResult.log"`
+				r=-1
+			else
+				sleep 3s
+			fi
+		done
+
+	

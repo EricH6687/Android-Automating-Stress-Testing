@@ -1,0 +1,107 @@
+#!/bin/sh
+#CameraScan_V1
+#Eric Huang 2013
+
+	echo "Testing is started at `date`..."
+	`date > "/data/local/tmp/procrank-CameraScan.log"`
+	`ps >> "/data/local/tmp/procrank-CameraScan.log"`
+	`date > "/data/local/tmp/meminfo-original.log"`
+	`cat /proc/meminfo >> "/data/local/tmp/meminfo-original.log"`
+	`date > "/data/local/tmp/scan_output.txt"`
+	export busyboxpath="/data/local/tmp/busybox"
+	export package="com.motorolasolutions.emdk.datawedge.DWDEMO"
+
+	r=0
+	dontstop=0
+	ScanOutput=0
+	ScanCheck="`ls /data/local/tmp/logcat_datawedge.txt -l`"
+	ScanPass=0
+	ScanFail=0
+	ScanNull=0
+
+	if [ "$1" == 0 ]
+	then
+		dontstop=1
+	fi
+
+	am start -a $package
+	for i in 1 2 3 4 5
+		do
+			input keyevent 4
+		done
+
+	sleep 120
+
+	while [ "$r" != `$busyboxpath expr $1 - $dontstop ` ]
+		do
+			ScanCheck="`ls /data/local/tmp/logcat_datawedge.txt -l`"
+			r=`$busyboxpath expr $r + 1 `
+			am start -a $package
+			sleep 3
+			sendevent /dev/input/event0 4 4 2
+			sendevent /dev/input/event0 1 528 1
+			sendevent /dev/input/event0 0 0 0
+			sleep 6
+			sendevent /dev/input/event0 4 4 2
+			sendevent /dev/input/event0 1 528 0
+			sendevent /dev/input/event0 0 0 0
+			sleep 3
+			echo "Scan for $r cycle(s)"
+			`echo "Scan for $r cycle(s):" >> "data/local/tmp/scan_output.txt"`
+			if [ "$ScanCheck" != "`ls /data/local/tmp/logcat_datawedge.txt -l`" ]
+				then
+					ScanOutput=`cat /data/local/tmp/logcat_datawedge.txt|$busyboxpath grep -i com.motorolasolutions.emdk.datawedge.data_string|$busyboxpath tail -n 1|$busyboxpath sed 's/^.*string=//g'|$busyboxpath sed 's/, com.*$//g'`
+					`echo $ScanOutput >> "data/local/tmp/scan_output.txt"`
+					if [ "$ScanOutput" == "$2" ]
+						then
+							ScanPass=`$busyboxpath expr $ScanPass + 1 `
+							echo "Scan Pass for $ScanPass cycle(s)"
+							`echo "Pass" >> "data/local/tmp/scan_output.txt"`
+						else
+							ScanFail=`$busyboxpath expr $ScanFail + 1 `
+							echo "Scan Fail for $ScanFail cycle(s)"
+							`echo "Fail" >> "data/local/tmp/scan_output.txt"`
+							input keyevent 4
+							sleep 5
+							`screenshot -i /data/local/tmp/screenshot/Scan_Fail_$ScanFail.png`
+							sleep 3
+					fi
+				else
+					ScanNull=`$busyboxpath expr $ScanNull + 1 `
+					echo "Scan Null for $ScanNull cycle(s)"
+					`echo "Null" >> "data/local/tmp/scan_output.txt"`
+					input keyevent 4
+					sleep 5
+					`screenshot -i /data/local/tmp/screenshot/Scan_Null_$ScanNull.png`
+					sleep 3
+			fi
+			`echo "-----" >> "data/local/tmp/scan_output.txt"`
+			if [ `$busyboxpath expr $r % 300 ` -eq 0 ]
+				then
+					`echo "Scan for $r cycle(s)" >> "/data/local/tmp/procrank-CameraScan.log"`
+					`date >> "/data/local/tmp/procrank-CameraScan.log"`
+					`ps >> "/data/local/tmp/procrank-CameraScan.log"`
+					echo "Record the memory info"
+			fi
+
+			for i in 1 2 3 4 5
+				do
+					input keyevent 4
+				done
+
+			echo `date`
+			`date > "/data/local/tmp/meminfo-aftertest.log"`
+			`cat /proc/meminfo >> "/data/local/tmp/meminfo-aftertest.log"`
+
+			`echo "Total of Scan Time: $r round" > "/data/local/tmp/TestResult.txt"`
+			`echo "Scan Pass for $ScanPass cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			`echo "Scan Fail for $ScanFail cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			`echo "Scan Null for $ScanNull cycle(s)" >> "/data/local/tmp/TestResult.txt"`
+			echo `uptime` >> "/data/local/tmp/TestResult.txt"
+
+		done
+
+	echo "Testing is finish at `date`..."
+
+
+
